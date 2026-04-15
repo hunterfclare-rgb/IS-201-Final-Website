@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Connections</title>
+  <link rel="stylesheet" href="../css/myStyles.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f5f5f5;
+      --bg-tertiary: #ebebeb;
+      --text: #1a1a1a;
+      --text-secondary: #6b6b6b;
+      --border: rgba(0,0,0,0.15);
+      --border-secondary: rgba(0,0,0,0.28);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a;
+        --bg-secondary: #2a2a2a;
+        --bg-tertiary: #333333;
+        --text: #f0f0f0;
+        --text-secondary: #999999;
+        --border: rgba(255,255,255,0.15);
+        --border-secondary: rgba(255,255,255,0.28);
+      }
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-secondary);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    #conn-game {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .conn-header { text-align: center; margin-bottom: 1.5rem; }
+    .conn-header h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; color: var(--text); letter-spacing: -.01em; }
+    .conn-header p { font-size: 13px; color: var(--text-secondary); margin: 0; }
+    .conn-puzzle-num { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+
+    .conn-mistakes {
+      display: flex; align-items: center; gap: 8px;
+      justify-content: center; margin-bottom: 1.25rem;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .conn-bubble {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--text); display: inline-block;
+      transition: background .3s;
+    }
+    .conn-bubble.used { background: var(--border); }
+
+    .conn-solved { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .conn-solved-row { border-radius: var(--radius-md); padding: 14px 12px; text-align: center; }
+    .conn-solved-row .cat-name { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+    .conn-solved-row .cat-words { font-size: 13px; margin-top: 2px; }
+
+    .conn-grid {
+      display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 8px; margin-bottom: 1.25rem;
+    }
+    .conn-tile {
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-secondary);
+      background: var(--bg-secondary);
+      color: var(--text);
+      font-size: 14px; font-weight: 500;
+      text-align: center; padding: 14px 6px;
+      cursor: pointer; user-select: none;
+      transition: background .15s, transform .1s;
+      text-transform: uppercase; letter-spacing: .04em;
+      line-height: 1.3; min-height: 64px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .conn-tile:hover { background: var(--bg-tertiary); }
+    .conn-tile.selected { background: #6a6a6a; color: #fff; border-color: #6a6a6a; }
+    .conn-tile.hinted { outline: 2px solid #f9df6d; outline-offset: -2px; }
+    .conn-tile.shake { animation: tile-shake .4s ease; }
+    .conn-tile.bounce { animation: tile-bounce .35s ease; }
+
+    @keyframes tile-shake {
+      0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)}
+      40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+    }
+    @keyframes tile-bounce {
+      0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)}
+    }
+
+    .conn-actions {
+      display: flex; gap: 8px; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 1rem;
+    }
+    .conn-actions button {
+      border-radius: 100px; border: 0.5px solid var(--border-secondary);
+      background: transparent; color: var(--text);
+      font-size: 14px; padding: 8px 18px; cursor: pointer;
+      transition: background .15s; font-family: var(--font);
+    }
+    .conn-actions button:hover { background: var(--bg-secondary); }
+    .conn-actions button:disabled { opacity: .35; cursor: default; }
+    .conn-actions button.primary {
+      background: var(--text); color: var(--bg);
+      border-color: var(--text);
+    }
+    .conn-actions button.primary:hover { opacity: .85; }
+    .conn-actions button.primary:disabled { opacity: .35; }
+
+    .conn-toast {
+      text-align: center; font-size: 14px; font-weight: 500;
+      min-height: 22px; margin-bottom: .5rem; color: var(--text);
+    }
+
+    .conn-result { text-align: center; padding: 1rem 0; }
+    .conn-result p { font-size: 15px; margin: 4px 0; color: var(--text); }
+    .conn-result-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+    .conn-result-btns button {
+      border-radius: 100px; border: 0.5px solid var(--border-secondary);
+      background: var(--text); color: var(--bg);
+      font-size: 14px; padding: 10px 24px; cursor: pointer;
+      font-family: var(--font);
+    }
+    .conn-result-btns button.outline { background: transparent; color: var(--text); }
+
+    /* Modals */
+    #conn-wrap { position: relative; }
+    .modal-bg {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-lg); z-index: 10;
+      min-height: 200px;
+    }
+    .modal-box {
+      background: var(--bg); border-radius: var(--radius-lg);
+      border: 0.5px solid var(--border-secondary);
+      padding: 1.5rem; max-width: 320px; width: 90%; text-align: center;
+    }
+    .modal-box h3 { font-size: 16px; font-weight: 500; margin: 0 0 8px; color: var(--text); }
+    .modal-box .modal-sub { font-size: 13px; color: var(--text-secondary); margin: 0 0 1.25rem; }
+
+    .hint-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.25rem; }
+    .hint-option {
+      border-radius: var(--radius-md); border: 0.5px solid var(--border-secondary);
+      padding: 10px 14px; cursor: pointer; text-align: left;
+      background: transparent; color: var(--text);
+      font-size: 13px; transition: background .15s;
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font);
+    }
+    .hint-option:hover { background: var(--bg-secondary); }
+    .hint-option:disabled { opacity: .4; cursor: default; }
+    .hint-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .hint-option-label { font-weight: 500; flex: 1; }
+    .hint-option-meta { font-size: 11px; color: var(--text-secondary); }
+    .modal-close {
+      border-radius: 100px; border: 0.5px solid var(--border-secondary);
+      background: transparent; color: var(--text);
+      font-size: 14px; padding: 8px 20px; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .share-grid { display: flex; flex-direction: column; gap: 4px; margin-bottom: 1.25rem; }
+    .share-row { display: flex; gap: 4px; justify-content: center; }
+    .share-sq { width: 32px; height: 32px; border-radius: 4px; }
+    .share-text-box {
+      background: var(--bg-secondary); border-radius: var(--radius-md);
+      padding: 10px 12px; font-size: 12px; font-family: monospace;
+      color: var(--text-secondary); text-align: left;
+      margin-bottom: 1rem; word-break: break-all; line-height: 1.6;
+    }
+    .share-btns { display: flex; gap: 8px; justify-content: center; }
+    .share-btns button {
+      border-radius: 100px; border: 0.5px solid var(--border-secondary);
+      background: var(--text); color: var(--bg);
+      font-size: 14px; padding: 9px 20px; cursor: pointer;
+      font-family: var(--font);
+    }
+    .share-btns button.outline { background: transparent; color: var(--text); }
+    .copied-badge { font-size: 12px; color: #3a8a3a; margin-top: 6px; min-height: 18px; }
+  </style>
+</head>
+<body>
+
+    <div class="common header"> 
+        <span class="subheader">
+            <a href="../index.html" id="top">Home</a> |
+            <a href="resume.html">Resume</a> |
+            <a href="scratch.html">Triple Jump</a> |
+            <a href="#">Game</a>
+        </span>
+    </div>
+
+<div id="conn-game">
+  <div class="conn-header">
+    <h1>Connections</h1>
+    <p>Group four words that share something in common.</p>
+    <div class="conn-puzzle-num" id="puzzle-num"></div>
+  </div>
+  <div class="conn-mistakes">
+    <span>Mistakes remaining:</span>
+    <span class="conn-bubble" id="b0"></span>
+    <span class="conn-bubble" id="b1"></span>
+    <span class="conn-bubble" id="b2"></span>
+    <span class="conn-bubble" id="b3"></span>
+  </div>
+  <div id="conn-wrap">
+    <div class="conn-solved" id="conn-solved"></div>
+    <div class="conn-grid" id="conn-grid"></div>
+  </div>
+  <div class="conn-toast" id="conn-toast"></div>
+  <div class="conn-actions">
+    <button id="btn-shuffle">Shuffle</button>
+    <button id="btn-hint">Hint 💡</button>
+    <button id="btn-deselect" disabled>Deselect all</button>
+    <button id="btn-submit" class="primary" disabled>Submit</button>
+  </div>
+  <div class="conn-result" id="conn-result" style="display:none"></div>
+</div>
+
+<script>
+  const COLORS = {
+    yellow: { bg: '#f9df6d', text: '#5c4a00' },
+    green:  { bg: '#a0c35a', text: '#2a4000' },
+    blue:   { bg: '#b0c4ef', text: '#0c2a5a' },
+    purple: { bg: '#ba81c5', text: '#3a0a4a' }
+  };
+  const C = (tier, name, words) => ({ name, words, color: COLORS[tier].bg, textColor: COLORS[tier].text });
+
+  const PUZZLE_BANK = [
+    [
+      C('yellow', 'Planets in our solar system', ['MARS','VENUS','SATURN','NEPTUNE']),
+      C('green',  'Things in an office',         ['STAPLER','BINDER','MONITOR','KEYBOARD']),
+      C('blue',   '___ ball',                    ['FIRE','BASKET','SNOW','CANNON']),
+      C('purple', 'Classic board games',         ['CLUE','RISK','SORRY','TROUBLE'])
+    ],
+    [
+      C('yellow', 'Ice cream flavors',           ['MINT','ROCKY ROAD','VANILLA','MANGO']),
+      C('green',  'Things that can be "sharp"',  ['CHEESE','TURN','WIT','CHEDDAR']),
+      C('blue',   '___ fish',                    ['SWORD','STAR','BLOW','CAT']),
+      C('purple', 'Anagram of a country',        ['SPAIN','CHINA','IRAN','NAIRU'])
+    ],
+    [
+      C('yellow', 'Types of pasta',              ['PENNE','RIGATONI','FUSILLI','ORZO']),
+      C('green',  'Parts of a shoe',             ['SOLE','TONGUE','HEEL','LACE']),
+      C('blue',   '___ stone',                   ['LIME','SAND','GOLD','KEY']),
+      C('purple', 'Famous Mikes',                ['TYSON','JORDAN','SCOTT','MYERS'])
+    ],
+    [
+      C('yellow', 'Dog breeds',                  ['BEAGLE','POODLE','HUSKY','BOXER']),
+      C('green',  'Things on a baseball field',  ['MOUND','DUGOUT','PLATE','DIAMOND']),
+      C('blue',   '___ park',                    ['CAR','BALL','THEME','SKATE']),
+      C('purple', 'Homophones of numbers',       ['ONE','ATE','FOR','SEA'])
+    ],
+    [
+      C('yellow', 'Things in a kitchen',         ['WHISK','COLANDER','TONGS','LADLE']),
+      C('green',  'Types of clouds',             ['CIRRUS','CUMULUS','NIMBUS','STRATUS']),
+      C('blue',   '___ light',                   ['MOON','FLASH','SPOT','SUN']),
+      C('purple', 'Shades of blue',              ['COBALT','TEAL','NAVY','CERULEAN'])
+    ],
+    [
+      C('yellow', 'Things you can catch',        ['COLD','BUS','WAVE','BREAK']),
+      C('green',  'Card game terms',             ['TRUMP','BLUFF','SUIT','HAND']),
+      C('blue',   '___ house',                   ['FIRE','TREE','OPEN','POWER']),
+      C('purple', 'Words before "dance"',        ['TAP','LINE','LAP','BREAK'])
+    ],
+    [
+      C('yellow', 'Pizza toppings',              ['BASIL','ANCHOVY','ARUGULA','PEPPERONI']),
+      C('green',  'Things with rings',           ['SATURN','TREE','BOXING','ONION']),
+      C('blue',   '___ cap',                     ['ICE','HUB','KNEE','NIGHT']),
+      C('purple', 'Famous Johns',                ['LENNON','WICK','ADAMS','MUIR'])
+    ],
+    [
+      C('yellow', 'Modes of transport',          ['KAYAK','GONDOLA','RICKSHAW','TRAM']),
+      C('green',  'Types of cheese',             ['BRIE','GOUDA','HAVARTI','MANCHEGO']),
+      C('blue',   '___ wave',                    ['HEAT','MICRO','CRIME','AIR']),
+      C('purple', 'Things that are forked',      ['ROAD','TONGUE','RIVER','LIGHTNING'])
+    ]
+  ];
+
+  let currentPuzzle = null;
+  let playedIndices = [];
+  let tiles = [], selected = [], mistakes = 0, solved = [], gameOver = false;
+  let hintsUsed = {}, guessHistory = [];
+  const MAX_MISTAKES = 4, HINT_MAX = 2;
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function pickNextPuzzle() {
+    if (playedIndices.length >= PUZZLE_BANK.length) playedIndices = [];
+    const remaining = PUZZLE_BANK.map((_, i) => i).filter(i => !playedIndices.includes(i));
+    const pick = remaining[Math.floor(Math.random() * remaining.length)];
+    playedIndices.push(pick);
+    currentPuzzle = PUZZLE_BANK[pick];
+    document.getElementById('puzzle-num').textContent = 'Puzzle ' + playedIndices.length + ' of ' + PUZZLE_BANK.length;
+  }
+
+  function initTiles() {
+    tiles = [];
+    currentPuzzle.forEach(cat => cat.words.forEach(word => tiles.push({ word, cat })));
+    tiles = shuffle(tiles);
+    hintsUsed = {}; guessHistory = [];
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById('conn-grid');
+    grid.innerHTML = '';
+    tiles.forEach((tile, i) => {
+      if (solved.includes(tile.cat)) return;
+      const el = document.createElement('div');
+      el.className = 'conn-tile' + (selected.includes(i) ? ' selected' : '');
+      el.textContent = tile.word;
+      el.dataset.idx = i;
+      el.addEventListener('click', () => onTileClick(i));
+      grid.appendChild(el);
+    });
+    document.getElementById('btn-deselect').disabled = selected.length === 0;
+    document.getElementById('btn-submit').disabled = selected.length !== 4;
+  }
+
+  function renderSolved() {
+    const el = document.getElementById('conn-solved');
+    el.innerHTML = '';
+    solved.forEach(cat => {
+      const row = document.createElement('div');
+      row.className = 'conn-solved-row';
+      row.style.background = cat.color;
+      row.innerHTML = `<div class="cat-name" style="color:${cat.textColor}">${cat.name}</div><div class="cat-words" style="color:${cat.textColor}">${cat.words.join(', ')}</div>`;
+      el.appendChild(row);
+    });
+  }
+
+  function renderBubbles() {
+    for (let i = 0; i < MAX_MISTAKES; i++)
+      document.getElementById('b' + i).classList.toggle('used', i >= (MAX_MISTAKES - mistakes));
+  }
+
+  function setToast(msg, duration = 2000) {
+    const t = document.getElementById('conn-toast');
+    t.textContent = msg;
+    if (duration) setTimeout(() => { if (t.textContent === msg) t.textContent = ''; }, duration);
+  }
+
+  function onTileClick(i) {
+    if (gameOver) return;
+    const idx = selected.indexOf(i);
+    if (idx === -1) { if (selected.length >= 4) return; selected.push(i); } else selected.splice(idx, 1);
+    renderGrid();
+  }
+
+  function animateTiles(indices, cls, cb) {
+    const els = document.querySelectorAll('.conn-tile');
+    const mapped = [];
+    els.forEach(el => { if (indices.includes(parseInt(el.dataset.idx))) mapped.push(el); });
+    mapped.forEach((el, i) => setTimeout(() => {
+      el.classList.add(cls);
+      el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+    }, i * 60));
+    setTimeout(cb, mapped.length * 60 + 400);
+  }
+
+  function onSubmit() {
+    if (selected.length !== 4 || gameOver) return;
+    const selTiles = selected.map(i => tiles[i]);
+    const cats = selTiles.map(t => t.cat);
+    const allSame = cats.every(c => c === cats[0]);
+
+    if (allSame) {
+      guessHistory.push({ cat: cats[0], correct: true });
+      animateTiles([...selected], 'bounce', () => {
+        solved.push(cats[0]);
+        tiles = tiles.filter((_, i) => !selected.includes(i));
+        selected = [];
+        renderSolved(); renderGrid();
+        if (solved.length === currentPuzzle.length) endGame(true);
+        else setToast('Correct!');
+      });
+    } else {
+      const oneAway = currentPuzzle.find(cat => selTiles.filter(t => t.cat === cat).length === 3);
+      guessHistory.push({ cat: null, correct: false, words: selTiles.map(t => t.word) });
+      animateTiles([...selected], 'shake', () => {
+        mistakes++;
+        renderBubbles(); selected = []; renderGrid();
+        if (mistakes >= MAX_MISTAKES) endGame(false);
+        else if (oneAway) setToast('One away...');
+        else setToast('Not quite — try again.');
+      });
+    }
+  }
+
+  function showHintModal() {
+    closeModals();
+    const wrap = document.getElementById('conn-wrap');
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg'; bg.id = 'hint-modal-bg';
+    const unsolvedCats = currentPuzzle.filter(c => !solved.includes(c));
+    const options = unsolvedCats.map(cat => {
+      const used = hintsUsed[cat.name] || 0;
+      const disabled = used >= HINT_MAX;
+      return `<button class="hint-option" ${disabled ? 'disabled' : ''} data-cat="${cat.name}">
+        <span class="hint-dot" style="background:${cat.color}"></span>
+        <span class="hint-option-label">${cat.name}</span>
+        <span class="hint-option-meta">${disabled ? 'No hints left' : (HINT_MAX - used) + ' left'}</span>
+      </button>`;
+    }).join('');
+    bg.innerHTML = `<div class="modal-box">
+      <h3>Get a hint</h3>
+      <p class="modal-sub">Highlight one word from a category.</p>
+      <div class="hint-options">${options}</div>
+      <button class="modal-close" id="hint-close-btn">Cancel</button>
+    </div>`;
+    bg.querySelectorAll('.hint-option:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cat = currentPuzzle.find(c => c.name === btn.dataset.cat);
+        hintsUsed[cat.name] = (hintsUsed[cat.name] || 0) + 1;
+        revealHint(cat); closeModals();
+      });
+    });
+    bg.querySelector('#hint-close-btn').addEventListener('click', closeModals);
+    wrap.appendChild(bg);
+  }
+
+  function revealHint(cat) {
+    const remaining = tiles.filter(t => t.cat === cat);
+    if (!remaining.length) return;
+    const pick = remaining[Math.floor(Math.random() * remaining.length)];
+    const idx = tiles.indexOf(pick);
+    document.querySelectorAll('.conn-tile').forEach(el => {
+      el.classList.remove('hinted');
+      if (parseInt(el.dataset.idx) === idx) {
+        el.classList.add('hinted');
+        setTimeout(() => el.classList.remove('hinted'), 3000);
+      }
+    });
+    setToast(`Hint: one "${cat.name}" word is highlighted.`, 3500);
+  }
+
+  function buildShareText() {
+    const emojiMap = { '#f9df6d': '🟨', '#a0c35a': '🟩', '#b0c4ef': '🟦', '#ba81c5': '🟪' };
+    const rows = guessHistory.map(g => {
+      if (g.correct) return Array(4).fill(emojiMap[g.cat.color] || '⬜').join('');
+      return currentPuzzle.flatMap(cat =>
+        Array((g.words || []).filter(w => cat.words.includes(w)).length).fill(emojiMap[cat.color] || '⬜')
+      ).join('');
+    }).join('\n');
+    return `Connections — Puzzle ${playedIndices.length}\n${mistakes === 0 ? 'No mistakes!' : 'Mistakes: ' + mistakes}\n\n${rows}`;
+  }
+
+  function showShareModal() {
+    closeModals();
+    const wrap = document.getElementById('conn-wrap');
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg'; bg.id = 'share-modal-bg';
+    const shareText = buildShareText();
+    const shareGrid = guessHistory.map(g => {
+      const colors = g.correct ? Array(4).fill(g.cat.color)
+        : currentPuzzle.flatMap(cat => Array((g.words || []).filter(w => cat.words.includes(w)).length).fill(cat.color));
+      return `<div class="share-row">${colors.map(c => `<div class="share-sq" style="background:${c}"></div>`).join('')}</div>`;
+    }).join('');
+    const sub = gameOver && solved.length === currentPuzzle.length
+      ? (mistakes === 0 ? 'Perfect solve!' : `Solved in ${guessHistory.length} guesses`)
+      : 'Results so far';
+    bg.innerHTML = `<div class="modal-box">
+      <h3>Share results</h3>
+      <p class="modal-sub">${sub}</p>
+      <div class="share-grid">${shareGrid}</div>
+      <div class="share-text-box">${shareText.replace(/\n/g, '<br>')}</div>
+      <div class="copied-badge" id="copied-badge"></div>
+      <div class="share-btns">
+        <button id="share-copy-btn">Copy</button>
+        <button class="outline" id="share-close-btn">Close</button>
+      </div>
+    </div>`;
+    bg.querySelector('#share-copy-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(shareText)
+        .then(() => { document.getElementById('copied-badge').textContent = 'Copied to clipboard!'; setTimeout(() => { const b = document.getElementById('copied-badge'); if (b) b.textContent = ''; }, 2000); })
+        .catch(() => { document.getElementById('copied-badge').textContent = 'Copy the text above manually.'; });
+    });
+    bg.querySelector('#share-close-btn').addEventListener('click', closeModals);
+    wrap.appendChild(bg);
+  }
+
+  function closeModals() {
+    ['hint-modal-bg', 'share-modal-bg'].forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+  }
+
+  function endGame(won) {
+    gameOver = true; setToast('', 0);
+    if (!won) {
+      currentPuzzle.forEach(cat => { if (!solved.includes(cat)) solved.push(cat); });
+      renderSolved();
+      document.getElementById('conn-grid').innerHTML = '';
+    }
+    const res = document.getElementById('conn-result');
+    res.style.display = 'block';
+    res.innerHTML = (won
+      ? `<p>You solved it! 🎉</p><p style="font-size:13px;color:var(--text-secondary)">${mistakes === 0 ? 'Perfect — no mistakes!' : 'Mistakes: ' + mistakes}</p>`
+      : `<p>Better luck next time!</p><p style="font-size:13px;color:var(--text-secondary)">You used all your guesses.</p>`)
+      + `<div class="conn-result-btns">
+          <button onclick="showShareModal()">Share results</button>
+          <button class="outline" onclick="resetGame()">Next puzzle</button>
+        </div>`;
+  }
+
+  function resetGame() {
+    selected = []; mistakes = 0; solved = []; gameOver = false;
+    pickNextPuzzle(); initTiles();
+    document.getElementById('conn-result').style.display = 'none';
+    document.getElementById('conn-solved').innerHTML = '';
+    closeModals(); renderBubbles(); renderGrid(); setToast('', 0);
+  }
+
+  document.getElementById('btn-shuffle').addEventListener('click', () => {
+    const rem = tiles.filter(t => !solved.includes(t.cat));
+    const sh = shuffle(rem);
+    tiles = tiles.map(t => solved.includes(t.cat) ? t : sh.shift());
+    selected = []; renderGrid();
+  });
+  document.getElementById('btn-deselect').addEventListener('click', () => { selected = []; renderGrid(); });
+  document.getElementById('btn-submit').addEventListener('click', onSubmit);
+  document.getElementById('btn-hint').addEventListener('click', showHintModal);
+
+  pickNextPuzzle(); initTiles(); renderBubbles(); renderGrid();
+</script>
+</body>
+</html>

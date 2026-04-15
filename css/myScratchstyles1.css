@@ -1,0 +1,91 @@
+body {
+    background-color: red;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+    .common {
+        /* background-color: #cccccc; */
+        border: 2px solid white;
+        position: absolute;
+    }
+
+    .header {
+        top: 5px;
+        left: 5px;
+        right: 5px;
+        height: 100px;
+        z-index: 2;
+        border-bottom: solid 1px #555555;
+        background-color: gray;
+    }
+
+
+    .mainbody {
+        top: 114px;
+        left: 5px;
+        right: 274px;
+        bottom: 39px;
+        padding-right: 5px;
+        background-color: gray;
+    }
+
+    .rightmenu {
+        top: 114px;
+        right: 5px;
+        width: 260px;
+        bottom: 39px;
+        border-left: solid 1px #555555;
+        padding-left: 5px;
+        background-color: goldenrod;
+        text-align: center;
+        font-weight: bolder;
+    }
+    .triplejumprecords{
+        font-weight: normal;
+    }
+
+    .footer {
+        bottom: 5px;
+        left: 5px;
+        right: 5px;
+        bottom: 25px;
+        font-size: 8px;
+        color: #999999;
+        text-align: center;
+        padding-top: 5px;
+        position: fixed;
+    }
+
+    .subheader {
+        float: right;
+    }
+    .triplejumprecordstitle {
+        padding-top: 5px;
+    }
+
+    .bold {
+        font-weight: bold;
+    }
+
+    .bottom-image {
+        left: 450px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        position: absolute;
+    }
+
+    .container {
+        display: flex;
+        align-items: center;   /* centers image vertically */
+        gap: 20px;             /* space between text and image */
+    }
+
+    .bottom-image {
+        width: 700px;          /* control image size */
+        height: auto;
+    }
+
+    .justify {
+        text-align: justify;
+    }
